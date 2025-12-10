@@ -7,8 +7,8 @@ function App() {
   const [messages, setMessages] = useState([]);
 
   // Poner el link de ngrok o localhost
-  const BACKEND_URL = "https://unimprisonable-matteo-demurely.ngrok-free.dev";
-
+  const BACKEND_URL = "https://rag-backend-1-pyhg.onrender.com";
+   // https://unimprisonable-matteo-demurely.ngrok-free.dev
   const sendMessage = async () => {
     if (!input) return;
 
