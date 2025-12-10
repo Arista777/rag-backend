@@ -7,4 +7,4 @@ python-dotenv==1.0.1
 requests==2.31.0
 python-multipart==0.0.16
 pypdf==3.17.1
-tiktoken==0.4.0
+tiktoken==0.3.3
