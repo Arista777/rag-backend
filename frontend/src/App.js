@@ -36,7 +36,7 @@ function App() {
 
   return (
     <div className="App">
-      <h1>RAG Chat Demo</h1>
+      <h1>RAG Chat Arista777</h1>
       <div className="chat-box">
         {messages.map((msg, i) => (
           <div key={i} className={msg.sender}>
