@@ -32,8 +32,8 @@ python-multipart==0.0.20
 PyYAML==6.0.3 
 regex==2025.11.3 
 requests==2.32.5 
-safetensors==0.7.0 s
-entence-transformers==5.1.2 
+safetensors==0.7.0 
+sentence-transformers==5.1.2 
 sniffio==1.3.1 
 starlette==0.49.3 
 sympy==1.14.0 
