@@ -1,10 +1,10 @@
-fastapi==0.110.0
+fastapi==0.95.2
 uvicorn==0.29.0
 openai==1.12.0
 qdrant-client==1.13.1
-pydantic==2.5.1          # versión estable que no requiere compilación
+pydantic==1.10.15
 python-dotenv==1.0.1
 requests==2.31.0
 python-multipart==0.0.16
 pypdf==3.17.1
-tiktoken==0.3.3          # compatible con py3.11
+tiktoken==0.4.0
