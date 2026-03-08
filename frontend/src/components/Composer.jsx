@@ -15,6 +15,12 @@ export default function Composer({ input, setInput, onSend, disabled }) {
           rows={2}
           value={input}
           onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              onSend();
+            }
+          }}
           placeholder="Send a message..."
           disabled={disabled}
         />
