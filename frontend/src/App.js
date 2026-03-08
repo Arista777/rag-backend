@@ -1,56 +1,48 @@
-import React, { useState } from "react";
-import axios from "axios";
-import "./App.css";
+import React from "react";
+import Sidebar from "./components/Sidebar";
+import MessageList from "./components/MessageList";
+import Composer from "./components/Composer";
+import UploadButton from "./components/UploadButton";
+import { useChatApp } from "./hooks/useChatApp";
 
 function App() {
-  const [input, setInput] = useState("");
-  const [messages, setMessages] = useState([]);
-
-  // Poner el link de ngrok o localhost
-  const BACKEND_URL = "https://rag-backend-1-pyhg.onrender.com";
-   // https://unimprisonable-matteo-demurely.ngrok-free.dev
-  const sendMessage = async () => {
-    if (!input) return;
-
-    setMessages([...messages, { sender: "user", text: input }]);
-
-    try {
-      const res = await axios.post(`${BACKEND_URL}/chat`, { query: input });
-
-      const botText = res.data.results.map(r => r.text).join("\n");
-
-      setMessages((prev) => [
-        ...prev,
-        { sender: "bot", text: botText || "No hay respuesta" },
-      ]);
-    } catch (error) {
-      setMessages((prev) => [
-        ...prev,
-        { sender: "bot", text: "Error al conectar con el backend" },
-      ]);
-      console.error(error);
-    }
-
-    setInput("");
-  };
+  const {
+    chats,
+    currentChatId,
+    setCurrentChatId,
+    messages,
+    input,
+    setInput,
+    loading,
+    uploading,
+    status,
+    handleNewChat,
+    handleSend,
+    handleUpload,
+  } = useChatApp();
 
   return (
-    <div className="App">
-      <h1>RAG Chat Arista777</h1>
-      <div className="chat-box">
-        {messages.map((msg, i) => (
-          <div key={i} className={msg.sender}>
-            <b>{msg.sender === "user" ? "Tú" : "Bot"}:</b> {msg.text}
-          </div>
-        ))}
-      </div>
-      <input
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-        placeholder="Escribe tu mensaje..."
+    <div className="min-h-screen flex flex-col md:flex-row text-slate-100">
+      <Sidebar
+        chats={chats}
+        currentChatId={currentChatId}
+        onNewChat={handleNewChat}
+        onSelectChat={setCurrentChatId}
       />
-      <button onClick={sendMessage}>Enviar</button>
+
+      <main className="flex-1 flex flex-col bg-slate-950/70 backdrop-blur-sm">
+        <header className="border-b border-slate-700 p-4 md:px-8 flex items-center justify-between">
+          <h1 className="text-lg font-semibold">AI Assistant</h1>
+          <UploadButton onUpload={handleUpload} uploading={uploading} />
+        </header>
+
+        {status && (
+          <div className="px-8 py-2 text-sm text-sky-300 border-b border-slate-800">{status}</div>
+        )}
+
+        <MessageList messages={messages} />
+        <Composer input={input} setInput={setInput} onSend={handleSend} disabled={loading} />
+      </main>
     </div>
   );
 }
