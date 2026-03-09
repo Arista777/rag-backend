@@ -20,13 +20,19 @@ class RAGService:
 
     def retrieve_context(self, query: str) -> tuple[str, list[dict]]:
         docs = self.vector_store.search(query, k=self.settings.retrieval_k)
+        if not docs and self.vector_store.metadata:
+            docs = self.vector_store.metadata[-self.settings.retrieval_k :]
         context = "\n\n".join(d.get("text", "") for d in docs)
         return context, docs
 
     def _build_messages(self, user_input: str, history: list[dict], context: str):
         system_prompt = (
-            "You are a production AI assistant. Answer clearly and concisely. "
-            "Use retrieved context when relevant. If context is insufficient, say so explicitly."
+            "You are a production AI assistant for RAG documents. "
+            "Answer in the same language as the user. "
+            "You receive excerpts from uploaded documents in the retrieved context. "
+            "Do not say you cannot read or access documents/tools; use the provided context directly. "
+            "If the retrieved context is not enough, say exactly: "
+            "'No encontré evidencia suficiente en los documentos cargados para responder con precisión.'"
         )
         messages = [{"role": "system", "content": system_prompt}]
 
