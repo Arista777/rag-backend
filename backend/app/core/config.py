@@ -28,9 +28,12 @@ class Settings(BaseSettings):
     vector_meta_path: Path = Field(default=DATA_DIR / "vector_meta.json", alias="VECTOR_META_PATH")
     upload_dir: Path = Field(default=DATA_DIR / "uploads", alias="UPLOAD_DIR")
 
-    retrieval_k: int = 4
-    max_chunk_size: int = 800
-    chunk_overlap: int = 120
+    retrieval_k: int = Field(default=6, alias="RETRIEVAL_K")
+    max_chunk_size: int = Field(default=800, alias="MAX_CHUNK_SIZE")
+    chunk_overlap: int = Field(default=120, alias="CHUNK_OVERLAP")
+    max_upload_mb: int = Field(default=10, alias="MAX_UPLOAD_MB")
+    max_chunks_per_upload: int = Field(default=400, alias="MAX_CHUNKS_PER_UPLOAD")
+    embedding_batch_size: int = Field(default=32, alias="EMBEDDING_BATCH_SIZE")
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore", populate_by_name=True)
 

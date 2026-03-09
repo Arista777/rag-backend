@@ -42,15 +42,27 @@ class VectorStore:
         vectors = [row.embedding for row in response.data]
         return np.array(vectors, dtype="float32")
 
-    def add_texts(self, texts: list[str], metadata: list[dict]) -> int:
+    def add_texts(self, texts: list[str], metadata: list[dict], batch_size: int = 32) -> int:
         if not texts:
             return 0
+        if len(texts) != len(metadata):
+            raise ValueError("texts and metadata must have the same length")
 
-        vectors = self._embed(texts)
-        self.index.add(vectors)
-        self.metadata.extend(metadata)
+        total_added = 0
+        safe_batch_size = max(1, batch_size)
+
+        for start in range(0, len(texts), safe_batch_size):
+            end = start + safe_batch_size
+            batch_texts = texts[start:end]
+            batch_metadata = metadata[start:end]
+
+            vectors = self._embed(batch_texts)
+            self.index.add(vectors)
+            self.metadata.extend(batch_metadata)
+            total_added += len(batch_texts)
+
         self._save()
-        return len(texts)
+        return total_added
 
     def search(self, query: str, k: int = 4) -> list[dict]:
         if self.index.ntotal == 0:
