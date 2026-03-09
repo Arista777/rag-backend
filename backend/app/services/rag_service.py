@@ -20,10 +20,33 @@ class RAGService:
 
     def retrieve_context(self, query: str) -> tuple[str, list[dict]]:
         docs = self.vector_store.search(query, k=self.settings.retrieval_k)
-        if not docs and self.vector_store.metadata:
-            docs = self.vector_store.metadata[-self.settings.retrieval_k :]
-        context = "\n\n".join(d.get("text", "") for d in docs)
-        return context, docs
+
+        # Lexical fallback: improves recall when embeddings are weak for broad queries.
+        query_terms = {term.strip(".,;:!?()[]{}\"'").lower() for term in query.split() if term}
+        lexical_scored: list[tuple[int, dict]] = []
+        if query_terms and self.vector_store.metadata:
+            for item in self.vector_store.metadata[-5000:]:
+                text = (item.get("text") or "").lower()
+                score = sum(1 for term in query_terms if len(term) > 2 and term in text)
+                if score > 0:
+                    lexical_scored.append((score, item))
+            lexical_scored.sort(key=lambda x: x[0], reverse=True)
+
+        merged: list[dict] = []
+        seen = set()
+        for doc in docs + [item for _, item in lexical_scored[: self.settings.retrieval_k]]:
+            key = (doc.get("source_file"), doc.get("chunk_index"))
+            if key in seen:
+                continue
+            seen.add(key)
+            merged.append(doc)
+            if len(merged) >= self.settings.retrieval_k:
+                break
+
+        if not merged and self.vector_store.metadata:
+            merged = self.vector_store.metadata[-self.settings.retrieval_k :]
+        context = "\n\n".join(d.get("text", "") for d in merged)
+        return context, merged
 
     def _build_messages(self, user_input: str, history: list[dict], context: str):
         system_prompt = (
