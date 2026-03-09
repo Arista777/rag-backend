@@ -1,4 +1,5 @@
 from collections.abc import Generator
+from datetime import datetime
 
 from openai import OpenAI
 
@@ -43,20 +44,55 @@ class RAGService:
             if len(merged) >= self.settings.retrieval_k:
                 break
 
-        if not merged and self.vector_store.metadata:
-            merged = self.vector_store.metadata[-self.settings.retrieval_k :]
         context = "\n\n".join(d.get("text", "") for d in merged)
         return context, merged
 
-    def _build_messages(self, user_input: str, history: list[dict], context: str):
+    def _is_document_query(self, user_input: str) -> bool:
+        text = user_input.lower()
+        keywords = [
+            "documento",
+            "document",
+            "archivo",
+            "pdf",
+            "txt",
+            "md",
+            "segun el documento",
+            "según el documento",
+            "del documento",
+            "uploaded file",
+            "source file",
+            "en el archivo",
+            "archivo cargado",
+            "documento cargado",
+            "subi",
+            "subí",
+            "upload",
+            "uploaded",
+        ]
+        return any(keyword in text for keyword in keywords)
+
+    def _build_messages(
+        self,
+        user_input: str,
+        history: list[dict],
+        context: str,
+        document_query: bool,
+    ):
+        today = datetime.utcnow().strftime("%Y-%m-%d")
         system_prompt = (
-            "You are a production AI assistant for RAG documents. "
+            "You are a production AI assistant. "
             "Answer in the same language as the user. "
-            "You receive excerpts from uploaded documents in the retrieved context. "
-            "Do not say you cannot read or access documents/tools; use the provided context directly. "
-            "If the retrieved context is not enough, say exactly: "
-            "'No encontré evidencia suficiente en los documentos cargados para responder con precisión.'"
+            f"Today (UTC) is {today}. "
+            "For general questions, answer normally with your own knowledge."
         )
+        if document_query:
+            system_prompt += (
+                " The user is asking about uploaded documents. "
+                "Use retrieved context directly and do not claim you cannot read files or tools. "
+                "If context is missing or insufficient, say exactly: "
+                "'No encontré evidencia suficiente en los documentos cargados para responder con precisión.'"
+            )
+
         messages = [{"role": "system", "content": system_prompt}]
 
         if context:
@@ -72,8 +108,11 @@ class RAGService:
         return messages
 
     def generate_answer(self, user_input: str, history: list[dict]) -> tuple[str, list[dict]]:
-        context, sources = self.retrieve_context(user_input)
-        messages = self._build_messages(user_input, history, context)
+        document_query = self._is_document_query(user_input)
+        context, sources = ("", [])
+        if document_query:
+            context, sources = self.retrieve_context(user_input)
+        messages = self._build_messages(user_input, history, context, document_query)
 
         response = self.client.chat.completions.create(
             model=self.settings.openai_chat_model,
@@ -84,8 +123,11 @@ class RAGService:
         return text, sources
 
     def stream_answer(self, user_input: str, history: list[dict]) -> tuple[Generator[str, None, None], list[dict]]:
-        context, sources = self.retrieve_context(user_input)
-        messages = self._build_messages(user_input, history, context)
+        document_query = self._is_document_query(user_input)
+        context, sources = ("", [])
+        if document_query:
+            context, sources = self.retrieve_context(user_input)
+        messages = self._build_messages(user_input, history, context, document_query)
 
         stream = self.client.chat.completions.create(
             model=self.settings.openai_chat_model,

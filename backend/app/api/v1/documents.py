@@ -2,11 +2,13 @@ from pathlib import Path
 import uuid
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_rag_service
 from app.core.config import get_settings
 from app.db.session import get_db
+from app.models.document import DocumentChunk
 from app.schemas.document import UploadResponse
 from app.services.document_service import DocumentService
 from app.services.rag_service import RAGService
@@ -79,3 +81,41 @@ async def upload_document(
     DocumentService.save_chunks(db, safe_filename, chunks)
 
     return UploadResponse(filename=safe_filename, chunks_added=added, status="ok")
+
+
+@router.get("")
+def list_documents(db: Session = Depends(get_db)):
+    rows = db.execute(
+        select(
+            DocumentChunk.source_file,
+            func.count(DocumentChunk.id).label("chunks"),
+            func.max(DocumentChunk.created_at).label("last_uploaded_at"),
+        )
+        .group_by(DocumentChunk.source_file)
+        .order_by(func.max(DocumentChunk.created_at).desc())
+    ).all()
+    return [
+        {
+            "source_file": row.source_file,
+            "chunks": row.chunks,
+            "last_uploaded_at": row.last_uploaded_at,
+        }
+        for row in rows
+    ]
+
+
+@router.get("/debug-search")
+def debug_search(query: str, rag: RAGService = Depends(get_rag_service)):
+    context, docs = rag.retrieve_context(query)
+    return {
+        "query": query,
+        "matches": [
+            {
+                "source_file": d.get("source_file"),
+                "chunk_index": d.get("chunk_index"),
+                "preview": (d.get("text", "")[:200]),
+            }
+            for d in docs
+        ],
+        "context_preview": context[:1000],
+    }
